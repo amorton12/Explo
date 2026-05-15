@@ -40,9 +40,7 @@ Or jump directly to:
 
 ## Container Runtime
 
-The Docker image uses s6-overlay for PID 1 and service supervision. Set `PUID` and `PGID` to control which UID and GID the main Explo process runs under, and keep using the same `.env`/config volume layout as before.
-
-If you mount the web config path as a directory, the container will still resolve it to the `.env` file inside that directory and keep the existing web UI behavior intact.
+The Docker image uses s6-overlay for PID 1 and service supervision. Set `PUID` and `PGID` to control which UID and GID the main Explo process runs under.
 
 
 ## Acknowledgements
