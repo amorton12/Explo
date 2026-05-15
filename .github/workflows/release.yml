@@ -282,7 +282,7 @@ jobs:
       contents: read
       packages: write
     concurrency:
-      group: preview-${{ github.ref }}
+      group: preview-${{ github.ref }}-${{ matrix.tag_suffix }}
       cancel-in-progress: true
     strategy:
       matrix:
