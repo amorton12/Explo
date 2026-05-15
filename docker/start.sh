@@ -1,20 +1,8 @@
 #!/bin/sh
-<<<<<<< Updated upstream
-echo "[setup] Starting web UI..."
-# If user incorectly mounts the config path as a directory, we'll try to automatically append it to .env inside it instead of failing.
-WEB_ENV_PATH="${WEB_ENV_PATH:-/opt/explo/.env}"
-if [ -d "$WEB_ENV_PATH" ]; then
-    WEB_ENV_PATH="$WEB_ENV_PATH/.env"
-    echo "[setup] Config path is a directory, using $WEB_ENV_PATH"
-fi
-WEB_UI=true WEB_ENV_PATH="$WEB_ENV_PATH" WEB_ADDR="${WEB_ADDR:-:7288}" /opt/explo/explo &
-echo "[setup] Web UI available at http://localhost:${WEB_ADDR##*:}"
-=======
->>>>>>> Stashed changes
 
 # Shared helper functions used by s6 init and service scripts.
 
-# If user incorectly mounts the config path as a directory, we'll try to automatically append it to .env inside it instead of failing.
+# If user incorrectly mounts the config path as a directory, we'll try to automatically append it to .env inside it instead of failing.
 runtime_resolve_web_env_path() {
   env_path="${WEB_ENV_PATH:-/opt/explo/.env}"
   if [ -d "$env_path" ]; then
@@ -26,14 +14,6 @@ runtime_resolve_web_env_path() {
 
 # Load *_SCHEDULE and *_FLAGS from .env if not already set in the environment.
 # This allows the web UI to configure schedules by writing to the .env file.
-<<<<<<< Updated upstream
-_cfg="${WEB_ENV_PATH:-/opt/explo/.env}"
-if [ -f "$_cfg" ]; then
-  while IFS= read -r _line; do
-    case "$_line" in \#*|'') continue ;; esac
-    _key="${_line%%=*}"
-    case "$_key" in
-=======
 runtime_load_schedule_envs() {
   env_path="$1"
 
@@ -48,7 +28,6 @@ runtime_load_schedule_envs() {
 
     key="${line%%=*}"
     case "$key" in
->>>>>>> Stashed changes
       *_SCHEDULE|*_FLAGS)
         if [ -z "$(printenv "$key" 2>/dev/null)" ]; then
           export "$key=${line#*=}"
@@ -124,7 +103,7 @@ runtime_generate_crontab() {
 
   : > /etc/crontabs/root
 
-  # $CRON_SHCEDULE was deprecated in v0.11.0, keeping this block for backwards compatibility
+  # $CRON_SCHEDULE was deprecated in v0.11.0, keeping this block for backwards compatibility
   if [ -n "${CRON_SCHEDULE:-}" ]; then
     printf '%s %s\n' "$CRON_SCHEDULE" '/usr/local/bin/explo-cron-run' >> /etc/crontabs/root
     echo "[setup] Registered single CRON_SCHEDULE job: $CRON_SCHEDULE"
@@ -171,9 +150,9 @@ runtime_execute_on_start() {
 runtime_start_webui() {
   runtime_env_path="$(runtime_resolve_web_env_path)"
   echo "[setup] Starting web UI with environment from $runtime_env_path"
+  echo "[setup] Web UI available at http://localhost:${WEB_ADDR##*:}"
   exec env WEB_UI=true WEB_ENV_PATH="$runtime_env_path" WEB_ADDR="${WEB_ADDR:-:7288}" \
     su-exec "$EXPLO_USER:$EXPLO_GROUP" /opt/explo/explo
-  echo "[setup] Web UI available at http://localhost:${WEB_ADDR##*:}"
 }
 
 runtime_run_cron_job() {
