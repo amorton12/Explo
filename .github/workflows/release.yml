@@ -5,6 +5,7 @@ on:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
     branches:
       - dev
+      - 'feat/**'
   pull_request:
     branches: ['*']
   workflow_dispatch:
@@ -262,3 +263,100 @@ jobs:
             ghcr.io/${{ github.repository }}:dev-amd64 \
             ghcr.io/${{ github.repository }}:dev-arm64 \
             ghcr.io/${{ github.repository }}:dev-armv7
+
+  build-preview:
+    name: Build/publish preview image
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/heads/feat/')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    concurrency:
+      group: preview-${{ github.ref }}
+      cancel-in-progress: true
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            tag_suffix: amd64
+            s6_overlay_arch: x86_64
+          - platform: linux/arm64
+            tag_suffix: arm64
+            s6_overlay_arch: aarch64
+          - platform: linux/arm/v7
+            tag_suffix: armv7
+            s6_overlay_arch: arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute preview tag
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
+          short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          preview_tag="${branch_slug}-${short_sha}"
+          echo "PREVIEW_TAG=${preview_tag}" >> "$GITHUB_ENV"
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push preview image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-${{ matrix.tag_suffix }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            TARGETARCH
+            S6_OVERLAY_ARCH=${{ matrix.s6_overlay_arch }}
+
+  build-preview-manifest:
+    name: Publish preview manifest
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/heads/feat/')
+    needs: build-preview
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Compute preview tag
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
+          short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          preview_tag="${branch_slug}-${short_sha}"
+          echo "PREVIEW_TAG=${preview_tag}" >> "$GITHUB_ENV"
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Publish preview manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }} \
+            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-amd64 \
+            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-arm64 \
+            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-armv7
