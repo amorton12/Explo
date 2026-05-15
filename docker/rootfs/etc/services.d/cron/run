@@ -1,0 +1,6 @@
+#!/command/with-contenv sh
+set -eu
+
+. /etc/default/explo-runtime
+
+exec crond -f -l 2

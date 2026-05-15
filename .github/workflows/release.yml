@@ -89,6 +89,18 @@ jobs:
       contents: read
       packages: write
       id-token: write
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            tag_suffix: amd64
+            s6_overlay_arch: x86_64
+          - platform: linux/arm64
+            tag_suffix: arm64
+            s6_overlay_arch: aarch64
+          - platform: linux/arm/v7
+            tag_suffix: armv7
+            s6_overlay_arch: arm
 
     steps:
       - name: Checkout repository
@@ -121,14 +133,45 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+            ghcr.io/${{ github.repository }}:latest-${{ matrix.tag_suffix }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: ${{ matrix.platform }}
           build-args: |
             TARGETARCH
+            S6_OVERLAY_ARCH=${{ matrix.s6_overlay_arch }}
             VERSION=${{ github.ref_name }}
+
+  build-manifest:
+    name: Publish release manifest
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Publish release manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
+            -t ghcr.io/${{ github.repository }}:latest \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-amd64 \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-arm64 \
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-armv7
 
   build-dev:
     name: Build/publish dev image
@@ -141,6 +184,18 @@ jobs:
     concurrency:
       group: dev-${{ github.ref }}
       cancel-in-progress: true
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            tag_suffix: amd64
+            s6_overlay_arch: x86_64
+          - platform: linux/arm64
+            tag_suffix: arm64
+            s6_overlay_arch: aarch64
+          - platform: linux/arm/v7
+            tag_suffix: armv7
+            s6_overlay_arch: arm
 
     steps:
       - name: Checkout repository
@@ -171,10 +226,39 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository }}:dev-${{ matrix.tag_suffix }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: ${{ matrix.platform }}
           build-args: |
             TARGETARCH
+            S6_OVERLAY_ARCH=${{ matrix.s6_overlay_arch }}
+
+  build-dev-manifest:
+    name: Publish dev manifest
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+    needs: build-dev
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Publish dev manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:dev \
+            ghcr.io/${{ github.repository }}:dev-amd64 \
+            ghcr.io/${{ github.repository }}:dev-arm64 \
+            ghcr.io/${{ github.repository }}:dev-armv7

@@ -1,0 +1,14 @@
+#!/command/with-contenv sh
+set -eu
+
+if [ -f /etc/default/explo-runtime ]; then
+    . /etc/default/explo-runtime
+fi
+
+: "${EXPLO_USER:=root}"
+: "${EXPLO_GROUP:=root}"
+
+exec >/proc/1/fd/1 2>&1
+
+. /usr/local/bin/explo-runtime.sh
+runtime_run_cron_job "$@"
