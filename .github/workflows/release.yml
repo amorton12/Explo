@@ -109,6 +109,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -120,7 +123,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.IMAGE_REPO }}
           tags: |
             type=ref,event=tag
             type=raw,value=latest
@@ -135,8 +138,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ matrix.tag_suffix }}
-            ghcr.io/${{ github.repository }}:latest-${{ matrix.tag_suffix }}
+            ${{ env.IMAGE_REPO }}:${{ github.ref_name }}-${{ matrix.tag_suffix }}
+            ${{ env.IMAGE_REPO }}:latest-${{ matrix.tag_suffix }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -155,6 +158,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -168,11 +174,11 @@ jobs:
       - name: Publish release manifest
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} \
-            -t ghcr.io/${{ github.repository }}:latest \
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-amd64 \
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-arm64 \
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-armv7
+            -t $IMAGE_REPO:${{ github.ref_name }} \
+            -t $IMAGE_REPO:latest \
+            $IMAGE_REPO:${{ github.ref_name }}-amd64 \
+            $IMAGE_REPO:${{ github.ref_name }}-arm64 \
+            $IMAGE_REPO:${{ github.ref_name }}-armv7
 
   build-dev:
     name: Build/publish dev image
@@ -204,6 +210,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -215,7 +224,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.IMAGE_REPO }}
           tags: |
             type=raw,value=dev
 
@@ -228,7 +237,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:dev-${{ matrix.tag_suffix }}
+            ${{ env.IMAGE_REPO }}:dev-${{ matrix.tag_suffix }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -246,6 +255,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -259,10 +271,10 @@ jobs:
       - name: Publish dev manifest
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:dev \
-            ghcr.io/${{ github.repository }}:dev-amd64 \
-            ghcr.io/${{ github.repository }}:dev-arm64 \
-            ghcr.io/${{ github.repository }}:dev-armv7
+            -t $IMAGE_REPO:dev \
+            $IMAGE_REPO:dev-amd64 \
+            $IMAGE_REPO:dev-arm64 \
+            $IMAGE_REPO:dev-armv7
 
   build-preview:
     name: Build/publish preview image
@@ -294,6 +306,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Compute preview tag
         run: |
           branch="${GITHUB_REF_NAME}"
@@ -318,7 +333,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-${{ matrix.tag_suffix }}
+            ${{ env.IMAGE_REPO }}:preview-${{ env.PREVIEW_TAG }}-${{ matrix.tag_suffix }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: ${{ matrix.platform }}
@@ -335,6 +350,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPO=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - name: Compute preview tag
         run: |
           branch="${GITHUB_REF_NAME}"
@@ -356,7 +374,7 @@ jobs:
       - name: Publish preview manifest
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }} \
-            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-amd64 \
-            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-arm64 \
-            ghcr.io/${{ github.repository }}:preview-${{ env.PREVIEW_TAG }}-armv7
+            -t $IMAGE_REPO:preview-${{ env.PREVIEW_TAG }} \
+            $IMAGE_REPO:preview-${{ env.PREVIEW_TAG }}-amd64 \
+            $IMAGE_REPO:preview-${{ env.PREVIEW_TAG }}-arm64 \
+            $IMAGE_REPO:preview-${{ env.PREVIEW_TAG }}-armv7
