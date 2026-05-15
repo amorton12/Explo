@@ -310,6 +310,10 @@ jobs:
         run: |
           branch="${GITHUB_REF_NAME}"
           branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
+          branch_slug="$(echo "$branch_slug" | sed -E 's/-+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "$branch_slug" ]; then
+            branch_slug="preview"
+          fi
           short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
           preview_tag="${branch_slug}-${short_sha}"
           echo "BRANCH_SLUG=${branch_slug}" >> "$GITHUB_ENV"
@@ -355,6 +359,10 @@ jobs:
         run: |
           branch="${GITHUB_REF_NAME}"
           branch_slug="$(echo "$branch" | tr '/[:space:]' '-' | tr -cd '[:alnum:]._-')"
+          branch_slug="$(echo "$branch_slug" | sed -E 's/-+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "$branch_slug" ]; then
+            branch_slug="preview"
+          fi
           short_sha="$(echo "${GITHUB_SHA}" | cut -c1-7)"
           preview_tag="${branch_slug}-${short_sha}"
           echo "BRANCH_SLUG=${branch_slug}" >> "$GITHUB_ENV"
